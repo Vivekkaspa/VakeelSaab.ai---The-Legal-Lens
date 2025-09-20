@@ -50,7 +50,7 @@ def critic_agent(summary: str, risks: str, rewrite: str) -> str:
 app = FastAPI()
 
 origins = [
-    "http://localhost:8000",
+    "https://demystifyinglegaldocuments.onrender.com/ ",
     "chrome-extension://*"
 ]
 
@@ -106,3 +106,7 @@ async def simplify(body: RequestBody):
         return {"summary": "Error", "risks": str(e), "rewrite": "-"}
 
 # Run with: uvicorn app:app --reload
+
+@app.get("/health")
+def health():
+  return {"status": "ok"}

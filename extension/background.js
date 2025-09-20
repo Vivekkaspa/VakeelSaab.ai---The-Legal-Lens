@@ -12,7 +12,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "simplifyText" && info.selectionText) {
     try {
       // Call FastAPI backend
-      const response = await fetch("http://localhost:8000/api/v1/simplify", {
+      const response = await fetch("https://demystifyinglegaldocuments.onrender.com/api/v1/simplify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ selection: { text: info.selectionText } })
