@@ -1,4 +1,4 @@
-Setup Instructions: 
+**Setup Instructions:** 
 
 Backend code is deployed on https://demystifyinglegaldocuments.onrender.com/
 
