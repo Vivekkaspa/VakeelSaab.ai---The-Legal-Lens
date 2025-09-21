@@ -4,10 +4,12 @@ from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+import google.generativeai as genai
 
 # Load OpenAI key from environment
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # ---- Helpers ----
 def call_llm(prompt: str) -> str:
@@ -21,18 +23,24 @@ def call_llm(prompt: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
+def call_gemini(prompt: str) -> str:
+    """Call Gemini LLM with a given prompt."""
+    model = genai.GenerativeModel("gemini-1.5-flash")  # or "gemini-1.5-pro"
+    response = model.generate_content(prompt)
+    return response.text.strip() if response and response.text else "No response"
+
 # ---- Agents ----
 def summarization_agent(text: str) -> str:
     prompt = f"Simplify the following legal clause into plain English:\n\n{text}"
-    return call_llm(prompt)
+    return call_gemini(prompt)
 
 def risk_agent(text: str) -> str:
     prompt = f"Identify potential risks, liabilities, or obligations in this clause:\n\n{text}"
-    return call_llm(prompt)
+    return call_gemini(prompt)
 
 def rewrite_agent(text: str) -> str:
     prompt = f"Rewrite this clause in a safer, clearer way while keeping the meaning:\n\n{text}"
-    return call_llm(prompt)
+    return call_gemini(prompt)
 
 def critic_agent(summary: str, risks: str, rewrite: str) -> str:
     prompt = f"""
@@ -44,7 +52,7 @@ def critic_agent(summary: str, risks: str, rewrite: str) -> str:
     Check for accuracy, consistency, and clarity. 
     Suggest improvements if needed.
     """
-    return call_llm(prompt)
+    return call_gemini(prompt)
 
 # ---- FastAPI Setup ----
 app = FastAPI()
@@ -68,6 +76,45 @@ class Selection(BaseModel):
 class RequestBody(BaseModel):
     selection: Selection
 
+# @app.post("/api/v1/simplify")
+# async def simplify(body: RequestBody):
+#     input_text = body.selection.text.strip()
+#     if not input_text:
+#         return {"summary": "No input text", "risks": "-", "rewrite": "-"}
+
+#     try:
+#         # Agent 1 - Summarize
+#         summary = client.chat.completions.create(
+#             model="gpt-4o-mini",
+#             messages=[{"role": "user", "content": f"Summarize this legal text: {input_text}"}],
+#             max_tokens=200
+#         ).choices[0].message.content.strip()
+
+#         # Agent 2 - Extract risks
+#         risks = client.chat.completions.create(
+#             model="gpt-4o-mini",
+#             messages=[{"role": "user", "content": f"List potential risks or obligations in this legal text: {input_text}"}],
+#             max_tokens=200
+#         ).choices[0].message.content.strip()
+
+#         # Agent 3 - Rewrite in plain English
+#         rewrite = client.chat.completions.create(
+#             model="gpt-4o-mini",
+#             messages=[{"role": "user", "content": f"Rewrite this in plain, simple English for a non-lawyer: {input_text}"}],
+#             max_tokens=300
+#         ).choices[0].message.content.strip()
+
+#         return {
+#             "summary": summary,
+#             "risks": risks,
+#             "rewrite": rewrite
+#         }
+
+#     except Exception as e:
+#         return {"summary": "Error", "risks": str(e), "rewrite": "-"}
+
+# Run with: uvicorn app:app --reload
+
 @app.post("/api/v1/simplify")
 async def simplify(body: RequestBody):
     input_text = body.selection.text.strip()
@@ -75,37 +122,15 @@ async def simplify(body: RequestBody):
         return {"summary": "No input text", "risks": "-", "rewrite": "-"}
 
     try:
-        # Agent 1 - Summarize
-        summary = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": f"Summarize this legal text: {input_text}"}],
-            max_tokens=200
-        ).choices[0].message.content.strip()
+        summary = call_gemini(f"Summarize this legal text: {input_text}")
+        risks   = call_gemini(f"List potential risks or obligations in this legal text: {input_text}")
+        rewrite = call_gemini(f"Rewrite this in plain, simple English for a non-lawyer: {input_text}")
 
-        # Agent 2 - Extract risks
-        risks = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": f"List potential risks or obligations in this legal text: {input_text}"}],
-            max_tokens=200
-        ).choices[0].message.content.strip()
-
-        # Agent 3 - Rewrite in plain English
-        rewrite = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": f"Rewrite this in plain, simple English for a non-lawyer: {input_text}"}],
-            max_tokens=300
-        ).choices[0].message.content.strip()
-
-        return {
-            "summary": summary,
-            "risks": risks,
-            "rewrite": rewrite
-        }
+        return {"summary": summary, "risks": risks, "rewrite": rewrite}
 
     except Exception as e:
         return {"summary": "Error", "risks": str(e), "rewrite": "-"}
 
-# Run with: uvicorn app:app --reload
 
 @app.get("/health")
 def health():
