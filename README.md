@@ -138,7 +138,7 @@ AI LAYER (Google Cloud Gen AI)
 
 ### 1. Backend
 The backend is already deployed at:  
-[https://demystifyinglegaldocuments.onrender.com/]((https://demystifyinglegaldocuments.onrender.com/)
+[https://demystifyinglegaldocuments.onrender.com/](https://demystifyinglegaldocuments.onrender.com/)
 
 ### 2. Chrome Extension
 1. Download the extension ZIP file from:  
